@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF分割工具 - 黑白简约版 v2.0</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="version" content="2.0-batch-preview">
+    <style>
+        /* 全局重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        /* 页面基础样式 - 纯黑白 */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #ffffff;
+            color: #000000;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        /* 主容器 */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #ffffff;
+        }
+        
+        /* 标题 */
+        .header {
+            text-align: center;
+            padding: 30px 0;
+            border-bottom: 2px solid #000000;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            font-weight: bold;
+            color: #000000;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 16px;
+            color: #666666;
+        }
+        
+        /* 卡片区块 */
+        .card {
+            border: 2px solid #000000;
+            margin-bottom: 20px;
+            background: #ffffff;
+        }
+        
+        .card-header {
+            background: #f5f5f5;
+            padding: 15px 20px;
+            border-bottom: 1px solid #000000;
+            font-weight: bold;
+            font-size: 16px;
+            color: #000000;
+        }
+        
+        .card-content {
+            padding: 20px;
+        }
+        
+        /* 文件上传区域 */
+        .upload-area {
+            border: 2px dashed #000000;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            background: #ffffff;
+            transition: background-color 0.2s;
+        }
+        
+        .upload-area:hover {
+            background: #f9f9f9;
+        }
+        
+        .upload-area.dragover {
+            background: #f0f0f0;
+            border-style: solid;
+        }
+        
+        .upload-text {
+            font-size: 18px;
+            color: #000000;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+        
+        .upload-subtitle {
+            font-size: 14px;
+            color: #666666;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        /* 文件列表 */
+        .file-list {
+            margin-top: 20px;
+            border: 1px solid #000000;
+            background: #ffffff;
+            display: none;
+        }
+        
+        .file-item {
+            border-bottom: 1px solid #cccccc;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        
+        .file-preview {
+            width: 80px;
+            height: 100px;
+            border: 1px solid #cccccc;
+            background: #f9f9f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #666666;
+            cursor: pointer;
+        }
+        
+        .file-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        
+        .file-info {
+            flex: 1;
+        }
+        
+        .file-name {
+            font-weight: bold;
+            color: #000000;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        
+        .file-details {
+            color: #666666;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+        
+        .file-settings {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .file-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        /* 路径选择器 */
+        .path-selector {
+            margin-bottom: 20px;
+        }
+        
+        .path-input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .path-input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #000000;
+            font-size: 14px;
+        }
+        
+        /* 选项组 */
+        .option-group {
+            border: 1px solid #000000;
+            margin-bottom: 15px;
+            background: #ffffff;
+        }
+        
+        .option-header {
+            padding: 15px;
+            cursor: pointer;
+            background: #ffffff;
+            border-bottom: 1px solid #cccccc;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .option-header:hover {
+            background: #f9f9f9;
+        }
+        
+        .option-content {
+            padding: 15px;
+            display: none;
+            border-top: 1px solid #cccccc;
+        }
+        
+        .option-content.active {
+            display: block;
+        }
+        
+        .option-label {
+            font-size: 16px;
+            color: #000000;
+            font-weight: 500;
+            flex: 1;
+        }
+        
+        input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #000000;
+        }
+        
+        /* 输入框 */
+        .input-field {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #000000;
+            font-size: 14px;
+            background: #ffffff;
+            color: #000000;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #333333;
+        }
+        
+        .input-field-small {
+            width: 80px;
+            padding: 5px;
+            font-size: 12px;
+        }
+        
+        /* 按钮 */
+        .btn {
+            padding: 12px 20px;
+            border: 2px solid #000000;
+            background: #ffffff;
+            color: #000000;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        
+        .btn:hover {
+            background: #f0f0f0;
+        }
+        
+        .btn-primary {
+            background: #000000;
+            color: #ffffff;
+        }
+        
+        .btn-primary:hover {
+            background: #333333;
+        }
+        
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        
+        .btn:disabled {
+            background: #cccccc;
+            color: #666666;
+            border-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        /* 进度条 */
+        .progress-container {
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            border: 2px solid #000000;
+            background: #ffffff;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #000000;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-text {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #000000;
+            font-weight: 500;
+        }
+        
+        .progress-details {
+            text-align: center;
+            margin-top: 5px;
+            font-size: 12px;
+            color: #666666;
+        }
+        
+        /* 结果显示 */
+        .result-container {
+            display: none;
+            border: 2px solid #000000;
+            background: #f8f8f8;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .result-header h3 {
+            color: #000000;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .result-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .result-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #cccccc;
+            color: #333333;
+            font-size: 14px;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        
+        /* 预览模态框 */
+        .preview-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+        }
+        
+        .preview-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #ffffff;
+            border: 2px solid #000000;
+            padding: 20px;
+            max-width: 80%;
+            max-height: 80%;
+            overflow: auto;
+        }
+        
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #cccccc;
+        }
+        
+        .preview-image {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #cccccc;
+        }
+        
+        .preview-controls {
+            text-align: center;
+            margin-top: 15px;
+        }
+        
+        /* 错误和成功消息 */
+        .message {
+            padding: 15px;
+            margin: 15px 0;
+            border: 2px solid #000000;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .error {
+            background: #f8f8f8;
+            color: #000000;
+        }
+        
+        .success {
+            background: #f0f0f0;
+            color: #000000;
+        }
+        
+        /* 按钮容器 */
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        /* 隐藏类 */
+        .hidden {
+            display: none;
+        }
+        
+        /* 批量操作工具栏 */
+        .batch-toolbar {
+            background: #f5f5f5;
+            border: 1px solid #000000;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .batch-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .batch-info {
+            font-size: 14px;
+            color: #000000;
+            margin-right: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 页面标题 -->
+        <div class="header">
+            <h1>PDF分割工具</h1>
+            <p>纯黑白简约设计 - 支持批量处理、文件预览、自定义路径</p>
+        </div>
+        
+        <!-- 文件选择区域 -->
+        <div class="card">
+            <div class="card-header">选择PDF文件</div>
+            <div class="card-content">
+                <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-text">选择PDF文件</div>
+                    <div class="upload-subtitle">支持多文件选择，点击选择或拖拽文件到此处</div>
+                    <input type="file" id="fileInput" accept=".pdf" multiple>
+                </div>
+                
+                <!-- 文件列表 -->
+                <div class="file-list" id="fileList"></div>
+            </div>
+        </div>
+        
+        <!-- 批量操作工具栏 -->
+        <div class="batch-toolbar" id="batchToolbar">
+            <div class="batch-actions">
+                <span class="batch-info">已选择 <span id="fileCount">0</span> 个文件</span>
+                <button class="btn btn-small" onclick="applyToAll('pages')">全部按页数</button>
+                <button class="btn btn-small" onclick="applyToAll('size')">全部按大小</button>
+                <button class="btn btn-small" onclick="clearAllFiles()">清空文件</button>
+            </div>
+        </div>
+        
+        <!-- 保存路径选择 -->
+        <div class="card">
+            <div class="card-header">保存设置</div>
+            <div class="card-content">
+                <div class="path-selector">
+                    <label for="outputPath" style="display: block; margin-bottom: 10px; font-weight: bold;">输出路径:</label>
+                    <div class="path-input-group">
+                        <input type="text" class="path-input" id="outputPath" placeholder="选择保存位置（留空使用默认路径）">
+                        <button type="button" class="btn" onclick="selectOutputPath()">浏览文件夹</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div class="button-container">
+            <button class="btn btn-primary" id="splitBtn" onclick="startBatchSplit()" disabled>开始批量分割</button>
+            <button class="btn" id="cancelBtn" onclick="cancelSplit()" disabled>取消处理</button>
+        </div>
+        
+        <!-- 进度显示 -->
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">准备就绪</div>
+            <div class="progress-details" id="progressDetails"></div>
+        </div>
+        
+        <!-- 结果显示 -->
+        <div class="result-container" id="resultContainer">
+            <div class="result-header">
+                <h3>分割完成</h3>
+            </div>
+            <div class="result-content" id="resultContent"></div>
+            <div class="button-container">
+                <button class="btn btn-primary" id="downloadBtn" onclick="downloadFiles()">下载所有文件</button>
+            </div>
+        </div>
+        
+        <!-- 预览模态框 -->
+        <div class="preview-modal" id="previewModal">
+            <div class="preview-content">
+                <div class="preview-header">
+                    <h3 id="previewTitle">文件预览</h3>
+                    <button class="btn btn-small" onclick="closePreview()">关闭</button>
+                </div>
+                <div id="previewBody">
+                    <img class="preview-image" id="previewImage" src="" alt="预览图">
+                </div>
+                <div class="preview-controls">
+                    <button class="btn btn-small" onclick="prevPage()">上一页</button>
+                    <span id="pageInfo">第 1 页，共 1 页</span>
+                    <button class="btn btn-small" onclick="nextPage()">下一页</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let uploadedFiles = [];
+        let currentPreviewFile = null;
+        let currentPreviewPage = 1;
+        let isProcessing = false;
+        let statusInterval = null;
+
+        // 文件上传处理
+        document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+        
+        // 拖拽上传
+        const uploadArea = document.querySelector('.upload-area');
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleMultipleFiles(Array.from(files));
+            }
+        });
+
+        function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            if (files.length > 0) {
+                handleMultipleFiles(files);
+            }
+        }
+
+        function handleMultipleFiles(files) {
+            const formData = new FormData();
+            files.forEach(file => {
+                if (file.name.toLowerCase().endsWith('.pdf')) {
+                    formData.append('files', file);
+                }
+            });
+
+            if (!formData.has('files')) {
+                showError('请选择有效的PDF文件');
+                return;
+            }
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 添加默认分割设置
+                    data.files.forEach(file => {
+                        file.mode = 'pages';
+                        file.pages_per_file = 10;
+                        file.target_size_mb = 5.0;
+                        file.page_ranges = '';
+                        file.auto_detect = true;
+                    });
+                    
+                    uploadedFiles = uploadedFiles.concat(data.files);
+                    updateFileList();
+                    updateUI();
+                } else {
+                    showError(data.error);
+                }
+            })
+            .catch(error => {
+                showError('文件上传失败: ' + error.message);
+            });
+        }
+
+        function updateFileList() {
+            const fileList = document.getElementById('fileList');
+            
+            if (uploadedFiles.length === 0) {
+                fileList.style.display = 'none';
+                return;
+            }
+
+            fileList.style.display = 'block';
+            fileList.innerHTML = '';
+
+            uploadedFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <div class="file-preview" onclick="previewFile('${file.filepath}', '${file.filename}')">
+                        <div>点击预览</div>
+                    </div>
+                    <div class="file-info">
+                        <div class="file-name">${file.filename}</div>
+                        <div class="file-details">
+                            ${file.file_size_mb}MB, ${file.page_count}页
+                            ${file.is_large_file ? '(大文件)' : ''}
+                        </div>
+                        <div class="file-settings">
+                            <select onchange="changeFileMode(${index}, this.value)" style="padding: 5px; border: 1px solid #000;">
+                                <option value="pages" ${file.mode === 'pages' ? 'selected' : ''}>按页数分割</option>
+                                <option value="size" ${file.mode === 'size' ? 'selected' : ''}>按大小分割</option>
+                                <option value="range" ${file.mode === 'range' ? 'selected' : ''}>按范围分割</option>
+                                <option value="chapter" ${file.mode === 'chapter' ? 'selected' : ''}>按章节分割</option>
+                            </select>
+                            <span id="file-params-${index}">
+                                ${getFileParamsHTML(file, index)}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="btn btn-small" onclick="removeFile(${index})">删除</button>
+                    </div>
+                `;
+                fileList.appendChild(fileItem);
+            });
+        }
+
+        function getFileParamsHTML(file, index) {
+            switch (file.mode) {
+                case 'pages':
+                    return `<input type="number" class="input-field-small" value="${file.pages_per_file}" min="1" max="1000" onchange="updateFileParam(${index}, 'pages_per_file', this.value)"> 页/文件`;
+                case 'size':
+                    return `<input type="number" class="input-field-small" value="${file.target_size_mb}" min="0.1" max="100" step="0.1" onchange="updateFileParam(${index}, 'target_size_mb', this.value)"> MB/文件`;
+                case 'range':
+                    return `<input type="text" class="input-field" value="${file.page_ranges}" placeholder="1-10,15-25" onchange="updateFileParam(${index}, 'page_ranges', this.value)" style="width: 150px;">`;
+                case 'chapter':
+                    return `<label><input type="checkbox" ${file.auto_detect ? 'checked' : ''} onchange="updateFileParam(${index}, 'auto_detect', this.checked)"> 自动检测</label>`;
+                default:
+                    return '';
+            }
+        }
+
+        function changeFileMode(index, mode) {
+            uploadedFiles[index].mode = mode;
+            updateFileParams(index);
+        }
+
+        function updateFileParam(index, param, value) {
+            uploadedFiles[index][param] = value;
+        }
+
+        function updateFileParams(index) {
+            const paramsContainer = document.getElementById(`file-params-${index}`);
+            paramsContainer.innerHTML = getFileParamsHTML(uploadedFiles[index], index);
+        }
+
+        function removeFile(index) {
+            uploadedFiles.splice(index, 1);
+            updateFileList();
+            updateUI();
+        }
+
+        function clearAllFiles() {
+            uploadedFiles = [];
+            updateFileList();
+            updateUI();
+        }
+
+        function applyToAll(mode) {
+            uploadedFiles.forEach(file => {
+                file.mode = mode;
+            });
+            updateFileList();
+        }
+
+        function updateUI() {
+            const hasFiles = uploadedFiles.length > 0;
+            
+            // 更新文件计数
+            document.getElementById('fileCount').textContent = uploadedFiles.length;
+            
+            // 显示/隐藏批量工具栏
+            document.getElementById('batchToolbar').style.display = hasFiles ? 'block' : 'none';
+            
+            // 启用/禁用分割按钮
+            document.getElementById('splitBtn').disabled = !hasFiles;
+        }
+
+        function selectOutputPath() {
+            // 由于浏览器安全限制，这里只能让用户手动输入
+            const path = prompt('请输入保存路径（例如：C:\\\\PDF输出）:');
+            if (path) {
+                document.getElementById('outputPath').value = path;
+            }
+        }
+
+        function previewFile(filepath, filename) {
+            currentPreviewFile = filepath;
+            currentPreviewPage = 1;
+            
+            document.getElementById('previewTitle').textContent = `预览: ${filename}`;
+            document.getElementById('previewModal').style.display = 'block';
+            
+            loadPreviewPage();
+        }
+
+        function loadPreviewPage() {
+            fetch('/preview_pdf', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    filepath: currentPreviewFile,
+                    page: currentPreviewPage
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('previewImage').src = data.preview_image;
+                    document.getElementById('pageInfo').textContent = `第 ${data.current_page} 页，共 ${data.total_pages} 页`;
+                } else if (data.fallback) {
+                    document.getElementById('previewBody').innerHTML = '<p>预览功能不可用，需要安装PyMuPDF库</p>';
+                } else {
+                    showError(data.error);
+                }
+            })
+            .catch(error => {
+                showError('预览加载失败: ' + error.message);
+            });
+        }
+
+        function prevPage() {
+            if (currentPreviewPage > 1) {
+                currentPreviewPage--;
+                loadPreviewPage();
+            }
+        }
+
+        function nextPage() {
+            currentPreviewPage++;
+            loadPreviewPage();
+        }
+
+        function closePreview() {
+            document.getElementById('previewModal').style.display = 'none';
+        }
+
+        function startBatchSplit() {
+            if (uploadedFiles.length === 0 || isProcessing) {
+                return;
+            }
+
+            const outputPath = document.getElementById('outputPath').value.trim();
+
+            const data = {
+                files: uploadedFiles,
+                output_path: outputPath
+            };
+
+            fetch('/split', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    startProcessing();
+                } else {
+                    showError(data.error);
+                }
+            })
+            .catch(error => {
+                showError('分割启动失败: ' + error.message);
+            });
+        }
+
+        function startProcessing() {
+            isProcessing = true;
+            document.getElementById('splitBtn').disabled = true;
+            document.getElementById('cancelBtn').disabled = false;
+            document.getElementById('progressContainer').style.display = 'block';
+            document.getElementById('resultContainer').style.display = 'none';
+
+            statusInterval = setInterval(checkStatus, 1000);
+        }
+
+        function checkStatus() {
+            fetch('/status')
+            .then(response => response.json())
+            .then(data => {
+                updateProgress(data);
+                
+                if (!data.is_processing) {
+                    clearInterval(statusInterval);
+                    isProcessing = false;
+                    document.getElementById('splitBtn').disabled = false;
+                    document.getElementById('cancelBtn').disabled = true;
+                    
+                    if (data.error) {
+                        showError(data.error);
+                    } else {
+                        showResult(data);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('状态检查失败:', error);
+            });
+        }
+
+        function updateProgress(data) {
+            document.getElementById('progressFill').style.width = data.progress + '%';
+            document.getElementById('progressText').textContent = data.message;
+            
+            if (data.current_file) {
+                document.getElementById('progressDetails').textContent = `当前处理: ${data.current_file}`;
+            }
+        }
+
+        function showResult(data) {
+            const content = document.getElementById('resultContent');
+            let html = `
+                <div style="margin-bottom: 15px;">
+                    <p><strong>处理完成!</strong></p>
+                    <p>处理文件数: ${data.processed_files || 0}</p>
+                    <p>生成文件数: ${data.output_files_count || 0}</p>
+                    <p>保存位置: ${data.save_location || '默认位置'}</p>
+                </div>
+                <div style="max-height: 200px; overflow-y: auto;">
+                    <ul class="result-list">
+            `;
+            
+            if (data.files) {
+                data.files.forEach(file => {
+                    html += `<li class="result-item">${file}</li>`;
+                });
+            }
+            
+            html += '</ul></div>';
+            
+            content.innerHTML = html;
+            document.getElementById('resultContainer').style.display = 'block';
+        }
+
+        function downloadFiles() {
+            window.location.href = '/download';
+        }
+
+        function cancelSplit() {
+            if (statusInterval) {
+                clearInterval(statusInterval);
+            }
+            isProcessing = false;
+            document.getElementById('splitBtn').disabled = false;
+            document.getElementById('cancelBtn').disabled = true;
+            document.getElementById('progressContainer').style.display = 'none';
+        }
+
+        function showError(message) {
+            const container = document.querySelector('.container');
+            const existingError = container.querySelector('.error');
+            if (existingError) {
+                existingError.remove();
+            }
+            
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'message error';
+            errorDiv.textContent = message;
+            container.insertBefore(errorDiv, container.firstChild);
+            
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        }
+
+        // 点击模态框外部关闭预览
+        document.getElementById('previewModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closePreview();
+            }
+        });
+    </script>
+</body>
+</html>
