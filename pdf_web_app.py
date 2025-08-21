@@ -17,9 +17,7 @@ sys.path.insert(0, project_dir)
 
 from pdf_processor import PDFProcessor, LargeFilePDFProcessor, comprehensive_integrity_check, create_integrity_report
 from pdf_chapter_splitter import PDFChapterSplitter, validate_pdf_integrity
-from PIL import Image
 import base64
-from io import BytesIO
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'pdf_splitter_secret_key'
@@ -102,9 +100,35 @@ def upload_file():
         'count': len(uploaded_files)
     })
 
+@app.route('/analyze_file', methods=['POST'])
+def analyze_file():
+    """深度分析单个PDF文件 - 使用先进技术"""
+    filepath = request.json.get('filepath')
+    
+    if not filepath or not os.path.exists(filepath):
+        return jsonify({'error': '文件不存在'})
+    
+    try:
+        from pdf_processor import PDFAnalyzer
+        analyzer = PDFAnalyzer()
+        analysis_result = analyzer.deep_analyze_pdf(filepath)
+        
+        # 添加额外的分析信息
+        analysis_result['file_path'] = filepath
+        analysis_result['analysis_time'] = time.time() # type: ignore
+        analysis_result['file_name'] = os.path.basename(filepath)
+        
+        return jsonify({
+            'success': True,
+            'analysis': analysis_result
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'深度分析失败: {str(e)}'})
+
 @app.route('/preview_pdf', methods=['POST'])
 def preview_pdf():
-    """预览PDF文件内容"""
+    """增强版PDF预览 - 集成文件分析"""
     filepath = request.json.get('filepath')
     page_num = request.json.get('page', 1)  # 默认预览第一页
     
@@ -112,42 +136,72 @@ def preview_pdf():
         return jsonify({'error': '文件不存在'})
     
     try:
-        import fitz  # PyMuPDF
+        # 首先进行快速分析
+        from pdf_processor import PDFAnalyzer
+        analyzer = PDFAnalyzer()
+        analysis_result = analyzer.deep_analyze_pdf(filepath)
         
-        # 打开PDF文件
-        doc = fitz.open(filepath)
-        if page_num < 1 or page_num > len(doc):
+        total_pages = analysis_result.get('pypdf2_pages', 0) or analysis_result.get('pymupdf_pages', 0)
+        
+        if page_num < 1 or page_num > total_pages:
             page_num = 1
         
-        # 获取指定页面
-        page = doc[page_num - 1]
-        
-        # 渲染页面为图像
-        mat = fitz.Matrix(1.5, 1.5)  # 缩放因子
-        pix = page.get_pixmap(matrix=mat)
-        img_data = pix.tobytes("png")
-        
-        # 转换为base64
-        img_base64 = base64.b64encode(img_data).decode('utf-8')
-        
-        doc.close()
-        
-        return jsonify({
+        # 构建预览信息
+        preview_info = {
             'success': True,
-            'preview_image': f"data:image/png;base64,{img_base64}",
+            'preview_available': False,
+            'message': '文件深度分析预览',
             'current_page': page_num,
-            'total_pages': len(doc)
-        })
+            'total_pages': total_pages,
+            'filename': os.path.basename(filepath),
+            'file_size': os.path.getsize(filepath),
+            'analysis': {
+                'confidence_score': analysis_result.get('confidence_score', 0),
+                'status': 'healthy' if analysis_result.get('confidence_score', 0) > 70 else 'warning',
+                'issues': analysis_result.get('issues_detected', []),
+                'recommendations': analysis_result.get('recommendations', []),
+                'methods_used': analysis_result.get('analysis_methods_used', []),
+                'encrypted': analysis_result.get('pypdf2_encrypted', False),
+                'has_toc': bool(analysis_result.get('pymupdf_toc', [])),
+                'metadata': analysis_result.get('pypdf2_metadata') or analysis_result.get('pymupdf_metadata', {}),
+                'page_info': analysis_result.get('pymupdf_page_sizes', [])[:3] if analysis_result.get('pymupdf_page_sizes') else [],
+                'text_info': analysis_result.get('pymupdf_text_info', [])[:3] if analysis_result.get('pymupdf_text_info') else [],
+                'image_info': analysis_result.get('pymupdf_image_info', [])[:3] if analysis_result.get('pymupdf_image_info') else []
+            }
+        }
         
-    except ImportError:
-        # 如果PyMuPDF不可用，返回基本信息
-        return jsonify({
-            'success': False,
-            'error': '预览功能需要安装PyMuPDF库',
-            'fallback': True
-        })
+        return jsonify(preview_info)
+        
     except Exception as e:
-        return jsonify({'error': f'预览失败: {str(e)}'})
+        # 备用基础预览
+        try:
+            from PyPDF2 import PdfReader
+            pdf_reader = PdfReader(filepath)
+            total_pages = len(pdf_reader.pages)
+            
+            if page_num < 1 or page_num > total_pages:
+                page_num = 1
+            
+            return jsonify({
+                'success': True,
+                'preview_available': False,
+                'message': '基础文件信息预览',
+                'current_page': page_num,
+                'total_pages': total_pages,
+                'filename': os.path.basename(filepath),
+                'file_size': os.path.getsize(filepath),
+                'analysis': {
+                    'confidence_score': 30,
+                    'status': 'basic_only',
+                    'issues': ['深度分析失败'],
+                    'recommendations': ['建议检查文件完整性'],
+                    'methods_used': ['PyPDF2基础'],
+                    'error': str(e)
+                }
+            })
+            
+        except Exception as basic_error:
+            return jsonify({'error': f'文件读取失败: {str(basic_error)}'})
 
 @app.route('/preview_chapters', methods=['POST'])
 def preview_chapters():
@@ -225,6 +279,14 @@ def split_pdf():
                 filename = file_data['filename']
                 mode = file_data.get('mode', 'pages')
                 
+                # 验证文件是否存在
+                if not os.path.exists(filepath):
+                    raise FileNotFoundError(f'文件不存在: {filename}')
+                
+                # 验证文件是否是PDF
+                if not filepath.lower().endswith('.pdf'):
+                    raise ValueError(f'文件不是PDF格式: {filename}')
+                
                 # 更新进度
                 processing_status['current_file'] = filename
                 processing_status['message'] = f'处理文件 {file_index + 1}/{total_files}: {filename}'
@@ -292,11 +354,14 @@ def split_pdf():
             })
             
         except Exception as e:
+            error_msg = f'处理失败: {str(e)}'
+            print(f"错误详情: {error_msg}")  # 打印详细错误信息
             processing_status.update({
                 'is_processing': False,
                 'progress': 0,
-                'message': '处理失败',
-                'error': str(e)
+                'message': error_msg,
+                'error': str(e),
+                'error_type': type(e).__name__
             })
     
     # 在后台线程中处理
