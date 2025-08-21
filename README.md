@@ -14,9 +14,10 @@
 
 ## 📸 界面预览
 
-![PDF分割工具界面1](https://github.com/JACK-bopp/pdf-splitter/blob/main/screenshots/interface1.png)
+![PDF分割工具界面1]<img width="2480" height="1229" alt="屏幕截图 2025-08-20 171449" src="https://github.com/user-attachments/assets/b1939339-ef10-4691-b70f-dcc38102a72e" />
 
-![PDF分割工具界面2](https://github.com/JACK-bopp/pdf-splitter/blob/main/screenshots/interface2.png)
+
+![PDF分割工具界面2]<img width="2284" height="1169" alt="屏幕截图 2025-08-20 171504" src="https://github.com/user-attachments/assets/63d3e21d-d9be-4f0f-b417-c50e601a6b99" />
 
 ---
 
@@ -131,5 +132,6 @@ pdf-splitter/
 ---
 
 ## 📄 许可证
+
 
 本项目采用 **MIT License** 开源协议 - 查看 [LICENSE](LICENSE) 文件了解详情
